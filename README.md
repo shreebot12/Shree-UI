@@ -12,6 +12,10 @@ Install JDK 17, Android SDK Platform 36, and Android Build Tools 36.0.0, then co
 ./gradlew :app:bundleRelease
 ```
 
+## Download an APK from GitHub Actions
+
+Every push to `main` automatically builds and tests the app. After the run succeeds, download `island-x-debug-apk` from the run's **Artifacts** section. The artifact contains the installable debug APK and is retained for 14 days. Pull requests also build and upload the APK.
+
 ## Edge Navigation
 
 Edge navigation is optional and disabled by default. Enable it from Edge Control, then explicitly enable the Island X accessibility service in Android settings. The service observes foreground package names only to maintain a local history; it does not retrieve screen content. Edge strips use Android's accessibility-overlay window type and require the accessibility service, not draw-over-other-apps access.
