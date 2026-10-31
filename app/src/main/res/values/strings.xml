@@ -1,0 +1,4 @@
+<resources>
+    <string name="edge_accessibility_service_label">Island X edge navigation</string>
+    <string name="edge_accessibility_service_description">Island X uses accessibility events only to remember eligible foreground app package names for Smart App Return. When enabled, it can perform Android Back and Recents actions for configured edge gestures. It does not retrieve screen content.</string>
+</resources>
