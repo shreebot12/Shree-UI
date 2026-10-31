@@ -7,7 +7,9 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.islandx.app.assistant.security.AssistantCipher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.settingsDataStore by preferencesDataStore(name = "island_x_settings")
@@ -27,6 +29,9 @@ data class IslandSettings(
     val edgeHoldDurationMs: Int = 2000,
     val edgeActivationDistanceDp: Int = 72,
     val excludedAppPackages: Set<String> = emptySet(),
+    val assistantEndpoint: String = "",
+    val assistantModel: String = "",
+    val assistantHasApiKey: Boolean = false,
 )
 
 object EdgeAction {
@@ -53,6 +58,9 @@ class SettingsRepository(private val context: Context) {
             edgeHoldDurationMs = values[Keys.edgeHoldDurationMs] ?: 2000,
             edgeActivationDistanceDp = values[Keys.edgeActivationDistanceDp] ?: 72,
             excludedAppPackages = values[Keys.excludedAppPackages] ?: emptySet(),
+            assistantEndpoint = values[Keys.assistantEndpoint] ?: "",
+            assistantModel = values[Keys.assistantModel] ?: "",
+            assistantHasApiKey = !values[Keys.assistantApiKey].isNullOrBlank(),
         )
     }
 
@@ -70,6 +78,29 @@ class SettingsRepository(private val context: Context) {
     suspend fun setEdgeHoldDuration(durationMs: Int) = update(Keys.edgeHoldDurationMs, durationMs.coerceIn(1000, 4000))
     suspend fun setEdgeActivationDistance(distanceDp: Int) = update(Keys.edgeActivationDistanceDp, distanceDp.coerceIn(32, 160))
     suspend fun setExcludedAppPackages(packages: Set<String>) = update(Keys.excludedAppPackages, packages)
+    suspend fun setAssistantEndpoint(endpoint: String) = update(Keys.assistantEndpoint, endpoint.trim())
+    suspend fun setAssistantModel(model: String) = update(Keys.assistantModel, model.trim())
+
+    suspend fun setAssistantConnection(endpoint: String, model: String, apiKey: String?) {
+        val encryptedKey = apiKey?.trim()?.takeIf(String::isNotEmpty)?.let { AssistantCipher().encrypt(it) }
+        context.settingsDataStore.edit { values ->
+            values[Keys.assistantEndpoint] = endpoint.trim()
+            values[Keys.assistantModel] = model.trim()
+            if (encryptedKey != null) values[Keys.assistantApiKey] = encryptedKey
+        }
+    }
+
+    suspend fun setAssistantApiKey(apiKey: String) {
+        update(
+            Keys.assistantApiKey,
+            apiKey.trim().takeIf(String::isNotEmpty)?.let { AssistantCipher().encrypt(it) }.orEmpty(),
+        )
+    }
+
+    suspend fun assistantApiKey(): String {
+        val encrypted = context.settingsDataStore.data.first()[Keys.assistantApiKey].orEmpty()
+        return encrypted.takeIf(String::isNotBlank)?.let { AssistantCipher().decrypt(it) }.orEmpty()
+    }
 
     private suspend fun <T> update(key: androidx.datastore.preferences.core.Preferences.Key<T>, value: T) {
         context.settingsDataStore.edit { it[key] = value }
@@ -90,5 +121,8 @@ class SettingsRepository(private val context: Context) {
         val edgeHoldDurationMs = intPreferencesKey("edge_hold_duration_ms")
         val edgeActivationDistanceDp = intPreferencesKey("edge_activation_distance_dp")
         val excludedAppPackages = stringSetPreferencesKey("excluded_app_packages")
+        val assistantEndpoint = stringPreferencesKey("assistant_endpoint")
+        val assistantModel = stringPreferencesKey("assistant_model")
+        val assistantApiKey = stringPreferencesKey("assistant_api_key_encrypted")
     }
 }

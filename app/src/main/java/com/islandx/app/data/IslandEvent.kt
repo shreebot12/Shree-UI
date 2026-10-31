@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.atomic.AtomicLong
 
-enum class IslandEventType { NOTIFICATION, MEDIA, CHARGING, BATTERY }
+enum class IslandEventType { NOTIFICATION, MEDIA, CHARGING, BATTERY, ASSISTANT }
 
 data class IslandAction(val label: String, val intent: PendingIntent)
 

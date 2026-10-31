@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -22,6 +24,7 @@
         android:name=".IslandXApplication"
         android:allowBackup="false"
         android:label="Island X"
+        android:networkSecurityConfig="@xml/assistant_network_security"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
         <activity android:name=".MainActivity" android:exported="true">

@@ -124,6 +124,11 @@ class IslandOverlayService : Service() {
         capsule.addView(row)
 
         if (expanded && event != null) {
+            if (event.type == IslandEventType.ASSISTANT && event.contentIntent != null) {
+                capsule.addView(action("Open Assistant", "Open Island X Assistant") {
+                    event.contentIntent.send()
+                })
+            }
             if (event.type == IslandEventType.MEDIA) {
                 val controls = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
@@ -144,6 +149,8 @@ class IslandOverlayService : Service() {
             if (!expanded) {
                 expanded = true
             } else if (event?.type == IslandEventType.NOTIFICATION) {
+                runCatching { event.contentIntent?.send() }
+            } else if (event?.type == IslandEventType.ASSISTANT) {
                 runCatching { event.contentIntent?.send() }
             } else {
                 expanded = false

@@ -27,7 +27,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.GraphicEq
@@ -62,6 +62,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
 import com.islandx.app.data.IslandSettings
 import com.islandx.app.data.SettingsRepository
+import com.islandx.app.assistant.AssistantRuntime
+import com.islandx.app.assistant.ui.AssistantScreen
 import com.islandx.app.integration.IslandNotificationListener
 import com.islandx.app.integration.IslandOverlayService
 import com.islandx.app.ui.EdgeNavigationSettingsPanel
@@ -79,7 +81,7 @@ class MainActivity : ComponentActivity() {
         val app = application as IslandXApplication
         setContent {
             MaterialTheme(colorScheme = darkColorScheme(primary = Mint, secondary = Acid, background = Night, surface = SurfaceColor)) {
-                IslandXApp(app.settings, app.events.events.collectAsState().value.size)
+                IslandXApp(app.settings, app.assistant, app.events.events.collectAsState().value.size)
             }
         }
     }
@@ -89,6 +91,7 @@ private data class Feature(val name: String, val description: String, val icon: 
 
 private val featureList = listOf(
     Feature("Island Studio", "Floating events and capsule behavior", Icons.Rounded.Bolt),
+    Feature("Assistant", "Private AI chat, voice, tools, memory, and skills", Icons.Rounded.Bolt),
     Feature("Notifications", "Local previews and lock-screen privacy", Icons.Rounded.NotificationsActive),
     Feature("Music Hub", "Active media sessions and transport controls", Icons.Rounded.GraphicEq),
     Feature("Charging Studio", "Battery and charger state", Icons.Rounded.Bolt),
@@ -104,7 +107,7 @@ private val featureList = listOf(
 )
 
 @Composable
-private fun IslandXApp(settingsRepository: SettingsRepository, eventCount: Int) {
+private fun IslandXApp(settingsRepository: SettingsRepository, assistant: AssistantRuntime, eventCount: Int) {
     val context = LocalContext.current
     val settings by settingsRepository.settings.collectAsState(initial = IslandSettings())
     val scope = rememberCoroutineScope()
@@ -137,7 +140,7 @@ private fun IslandXApp(settingsRepository: SettingsRepository, eventCount: Int) 
                 items(featureList) { feature -> FeatureRow(feature) { selected = feature } }
                 item {
                     Text(
-                        "The available controls depend on Android permissions, OS behavior, and device hardware. Nothing is sent to a server.",
+                        "Controls depend on Android permissions and device hardware. Only assistant requests you submit to a configured cloud endpoint leave this device.",
                         color = SecondaryText,
                         fontSize = 11.sp,
                         lineHeight = 17.sp,
@@ -146,35 +149,39 @@ private fun IslandXApp(settingsRepository: SettingsRepository, eventCount: Int) 
                 }
             }
         } else {
-            FeatureDetail(
-                feature = selected!!,
-                settings = settings,
-                onBack = { selected = null },
-                onIslandToggle = { enabled ->
-                    if (enabled && !Settings.canDrawOverlays(context)) {
-                        openPermission(context, "overlay")
-                    } else {
-                        scope.launch { settingsRepository.setIslandEnabled(enabled) }
-                        if (enabled) context.startService(Intent(context, IslandOverlayService::class.java))
-                        else context.stopService(Intent(context, IslandOverlayService::class.java))
-                    }
-                },
-                onEdgeWidth = { scope.launch { settingsRepository.setEdgeWidth(it) } },
-                onSensitivity = { scope.launch { settingsRepository.setEdgeSensitivity(it) } },
-                onPrivacy = { scope.launch { settingsRepository.setPrivateOnLockScreen(it) } },
-                onEdgeNavigationToggle = { enabled ->
-                    scope.launch { settingsRepository.setEdgeNavigationEnabled(enabled) }
-                    if (enabled) openPermission(context, "accessibility")
-                },
-                onLeftBackAction = { scope.launch { settingsRepository.setLeftEdgeBackAction(it) } },
-                onRightBackAction = { scope.launch { settingsRepository.setRightEdgeBackAction(it) } },
-                onLeftHoldAction = { scope.launch { settingsRepository.setLeftEdgeHoldAction(it) } },
-                onRightHoldAction = { scope.launch { settingsRepository.setRightEdgeHoldAction(it) } },
-                onHoldDuration = { scope.launch { settingsRepository.setEdgeHoldDuration(it) } },
-                onActivationDistance = { scope.launch { settingsRepository.setEdgeActivationDistance(it) } },
-                onExcludedPackages = { scope.launch { settingsRepository.setExcludedAppPackages(it) } },
-                onPermission = { openPermission(context, it) },
-            )
+            if (selected?.name == "Assistant") {
+                AssistantScreen(assistant, settingsRepository) { selected = null }
+            } else {
+                FeatureDetail(
+                    feature = selected!!,
+                    settings = settings,
+                    onBack = { selected = null },
+                    onIslandToggle = { enabled ->
+                        if (enabled && !Settings.canDrawOverlays(context)) {
+                            openPermission(context, "overlay")
+                        } else {
+                            scope.launch { settingsRepository.setIslandEnabled(enabled) }
+                            if (enabled) context.startService(Intent(context, IslandOverlayService::class.java))
+                            else context.stopService(Intent(context, IslandOverlayService::class.java))
+                        }
+                    },
+                    onEdgeWidth = { scope.launch { settingsRepository.setEdgeWidth(it) } },
+                    onSensitivity = { scope.launch { settingsRepository.setEdgeSensitivity(it) } },
+                    onPrivacy = { scope.launch { settingsRepository.setPrivateOnLockScreen(it) } },
+                    onEdgeNavigationToggle = { enabled ->
+                        scope.launch { settingsRepository.setEdgeNavigationEnabled(enabled) }
+                        if (enabled) openPermission(context, "accessibility")
+                    },
+                    onLeftBackAction = { scope.launch { settingsRepository.setLeftEdgeBackAction(it) } },
+                    onRightBackAction = { scope.launch { settingsRepository.setRightEdgeBackAction(it) } },
+                    onLeftHoldAction = { scope.launch { settingsRepository.setLeftEdgeHoldAction(it) } },
+                    onRightHoldAction = { scope.launch { settingsRepository.setRightEdgeHoldAction(it) } },
+                    onHoldDuration = { scope.launch { settingsRepository.setEdgeHoldDuration(it) } },
+                    onActivationDistance = { scope.launch { settingsRepository.setEdgeActivationDistance(it) } },
+                    onExcludedPackages = { scope.launch { settingsRepository.setExcludedAppPackages(it) } },
+                    onPermission = { openPermission(context, it) },
+                )
+            }
         }
     }
 }
@@ -248,7 +255,7 @@ private fun FeatureDetail(
             Modifier.fillMaxWidth().clickable(onClick = onBack).padding(vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Rounded.ArrowBack, contentDescription = "Back", tint = Mint)
+            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back", tint = Mint)
             Spacer(Modifier.width(12.dp))
             Text(feature.name, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
         }
@@ -298,7 +305,7 @@ private fun FeatureDetail(
                     item { Information("Sensors", sensorSummary()) }
                     item { Information("Overlay", if (Settings.canDrawOverlays(LocalContext.current)) "Granted" else "Not granted") }
                 }
-                "About and Diagnostics" -> item { Information("Island X 1.0.0", "Debug and release variants are configured. This project has not yet been built in the current environment; see DEVELOPMENT_STATUS.md.") }
+                "About and Diagnostics" -> item { Information("Island X 1.0.0", "Debug and release builds and local unit tests are listed in DEVELOPMENT_STATUS.md. Some device-dependent behavior still needs physical-device testing.") }
                 else -> item { Information("Not available", "This capability is not implemented in the current build.") }
             }
         }
